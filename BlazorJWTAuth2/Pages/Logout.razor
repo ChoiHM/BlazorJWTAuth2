@@ -1,0 +1,31 @@
+﻿@page "/logout"
+
+@using BlazorJWTAuth2.Auth;
+@using BlazorJWTAuth2.Model;
+@using Blazored.LocalStorage;
+@using Microsoft.IdentityModel.Tokens;
+@using System.Text;
+@using System.IdentityModel.Tokens.Jwt;
+@using System.Security.Claims;
+
+@inject ILocalStorageService _localStorage
+@inject CustomAuthStateProvider _authState
+@inject NavigationManager _navi
+
+@code {
+    private LoginDto loginModel = new LoginDto();
+
+    private bool IsAuthenticated { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await HandleLogout();
+    }
+
+    private async Task HandleLogout()
+    {
+        await _localStorage.RemoveItemAsync("jwt");
+        _authState.NotifyUserLogout();
+        _navi.NavigateTo("/", true);
+    }
+}

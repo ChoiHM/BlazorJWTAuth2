@@ -1,0 +1,91 @@
+﻿@using BlazorJWTAuth2.Auth;
+@using Blazored.LocalStorage;
+@using System.Security.Claims;
+@inherits LayoutComponentBase
+
+@inject ILocalStorageService _localStorage
+@inject CustomAuthStateProvider _authState
+
+<PageTitle>BlazorJWTAuth2</PageTitle>
+
+<div class="page">
+    <div class="sidebar">
+        <NavMenu />
+    </div>
+
+    <main>
+        <div class="top-row px-4">
+            @if (IsAuthenticated)
+            {
+                <a href="/logout">로그아웃</a>
+            }
+            else
+            {
+                <a href="/login">로그인</a>
+            }
+            <a href="https://docs.microsoft.com/aspnet/" target="_blank">About</a>
+        </div>
+
+        <article class="content px-4">
+            @Body
+        </article>
+    </main>
+</div>
+
+@code {
+    private string? authMessage;
+    private string? surname;
+    private IEnumerable<Claim> claims = Enumerable.Empty<Claim>();
+    private bool IsAuthenticated { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                var customAuthProvider = _authState as CustomAuthStateProvider;
+                _authState.OnChange += HandleAuthenticationStateChange;
+                await RefreshAuthenticationStateAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error: {ex.Message}");
+            }
+        }
+    }
+
+    private async Task RefreshAuthenticationStateAsync()
+    {
+        var authState = await _authState.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        // Admin Role을 갖고있는지 확인하려면
+        // if(user.IsInRole("Admin"))
+        // {
+        // }
+
+        if (user.Identity is not null && user.Identity.IsAuthenticated)
+        {
+            IsAuthenticated = user.Identity.IsAuthenticated;
+            authMessage = $"{user.Identity.Name} is authenticated.";
+            claims = user.Claims;
+            surname = user.FindFirst(c => c.Type == ClaimTypes.Surname)?.Value;
+        }
+        else
+        {
+            authMessage = "The user is NOT authenticated.";
+        }
+        StateHasChanged();
+    }
+
+    private void HandleAuthenticationStateChange()
+    {
+        _ = RefreshAuthenticationStateAsync(); // Discard the Task to avoid warnings.
+    }
+
+    public void Dispose()
+    {
+        _authState.OnChange -= HandleAuthenticationStateChange;
+    }
+}

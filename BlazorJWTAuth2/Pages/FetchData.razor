@@ -1,0 +1,76 @@
+﻿@page "/fetchdata"
+@attribute [Authorize(Roles = "Member,PM")]
+
+@using BlazorJWTAuth2.Auth;
+@using BlazorJWTAuth2.Data
+@inject WeatherForecastService ForecastService
+@inject CustomAuthStateProvider _authState
+
+<PageTitle>Weather forecast</PageTitle>
+
+<h1>Member 전용</h1>
+<h3>(페이지 내부에서 Role에 따른 처리 분기 예시)</h3>
+<p>'Member' Role을 가진 유저한테 보이는 페이지이긴 하지만, 다음 내용은 'PM' Role을 가진 사람만 확인할 수 있는 내용입니다.</p>
+<hr/>
+<AuthorizeView Roles="PM">
+    <Authorized>
+        @if (forecasts == null)
+        {
+            <p><em>Loading...</em></p>
+        }
+        else
+        {
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Temp. (C)</th>
+                        <th>Temp. (F)</th>
+                        <th>Summary</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var forecast in forecasts)
+                    {
+                        <tr>
+                            <td>@forecast.Date.ToShortDateString()</td>
+                            <td>@forecast.TemperatureC</td>
+                            <td>@forecast.TemperatureF</td>
+                            <td>@forecast.Summary</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </Authorized>
+    <NotAuthorized>
+        <h5>당신은 'PM' Role이 없어요! 😥</h5>
+    </NotAuthorized>
+</AuthorizeView>
+
+
+@code {
+    private WeatherForecast[]? forecasts;
+
+    protected override async Task OnInitializedAsync()
+    {
+        forecasts = await ForecastService.GetForecastAsync(DateOnly.FromDateTime(DateTime.Now));
+
+        var authState = await _authState.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        // Admin권한을 갖고있는지 확인
+        // if(user.IsInRole("Admin"))
+        // {
+        // }
+
+        if (user.Identity is not null && user.Identity.IsAuthenticated)
+        {
+            var claims = user.Claims;
+        }
+        else
+        {
+        }
+    }
+
+}

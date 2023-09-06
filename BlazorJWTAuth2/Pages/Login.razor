@@ -1,0 +1,124 @@
+﻿@page "/login"
+
+@using BlazorJWTAuth2.Auth;
+@using BlazorJWTAuth2.Model;
+@using Blazored.LocalStorage;
+@using Microsoft.IdentityModel.Tokens;
+@using System.Text;
+@using System.IdentityModel.Tokens.Jwt;
+@using System.Security.Claims;
+
+@inject ILocalStorageService _localStorage
+@inject CustomAuthStateProvider _authState
+@inject NavigationManager _navi
+
+<AuthorizeView>
+    <Authorized>
+        <h5>인증된 상태입니다.</h5>
+        @if (currentUser != null)
+        {
+            <p>Hello, @currentUser.FindFirst("UserName")?.Value (@currentUser.FindFirst("DepartmentText")?.Value)</p>
+        }
+    </Authorized>
+    <NotAuthorized>
+        <h5>로그인하세요.</h5>
+        <p>아이디, 비밀번호는 아무렇게나 입력해도 로그인이 가능해요.</p>
+        <p>이 부분을 수정하려면 Login.razor파일 > AuthenticateUser 함수 내부의 [3]번 항목을 수정하세요.</p>
+    </NotAuthorized>
+</AuthorizeView>
+
+@if (IsAuthenticated)
+{
+    <h1>로그인 되었어요!</h1>
+}
+else
+{
+    <EditForm Model="loginModel" OnValidSubmit="HandleLogin">
+        <ChildContent>
+            <InputText @bind-Value="loginModel.Username" placeholder="Username" />
+            <InputText @bind-Value="loginModel.Password" type="password" placeholder="Password" />
+            <button type="submit">Login</button>
+        </ChildContent>
+    </EditForm>
+}
+
+@code {
+    private LoginDto loginModel = new LoginDto();
+    private ClaimsPrincipal? currentUser;
+
+    private bool IsAuthenticated { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+        var authState = await _authState.GetAuthenticationStateAsync();
+        var user = authState.User;
+        // 사용자 식별되었고, 인증된 상태일 때
+        if (user.Identity is not null && user.Identity.IsAuthenticated)
+        {
+            IsAuthenticated = user.Identity.IsAuthenticated;
+            currentUser = authState.User;
+            var test = authState.User.Claims.FirstOrDefault(x => x.Type == "DepartmentText");
+        }
+        // 그 외
+        else
+        {
+
+        }
+        StateHasChanged();
+    }
+
+    private async Task HandleLogin()
+    {
+        if (string.IsNullOrWhiteSpace(loginModel.Username) || string.IsNullOrWhiteSpace(loginModel.Password))
+        {
+            return;
+        }
+
+        var token = await AuthenticateUser(loginModel.Username, loginModel.Password);
+        if (!string.IsNullOrEmpty(token))
+        {
+            // 확장 함수를 통해 토큰 암호화 후 localStorage에 저장
+            await _localStorage.SaveItemEncryptedAsync<string>("jwt", token);
+            _authState.NotifyUserAuthentication(token);
+            StateHasChanged();
+            _navi.NavigateTo("/", true);
+        }
+    }
+
+    private async Task<string> AuthenticateUser(string username, string password)
+    {
+        await Task.Delay(1);
+
+        //[1] 비밀키 선언
+        var secretKey = Encoding.ASCII.GetBytes("PEDOSriPgbjP45poei5ghyjoPOID24fthgbhEo5RETYGrdft");
+        //[2] 비밀키로 서명 생성
+        var credentials = new SigningCredentials(new SymmetricSecurityKey(secretKey), SecurityAlgorithms.HmacSha256Signature);
+        //[3] 사용자 Id로 Uid 및 정보를 가져온다.
+        //var userInfo = await _authRepo.GetUserInfoByIdAsync(input.Id);
+        var userInfo = new ClaimInfo() { Id = "test", Name = "CodeReaper", DepartmentText = "부서 이름", TeamText = "팀 이름" };
+
+        //[4] 가져온 현재 사용자 정보를 담는다.
+        var claims = new List<Claim>
+            {
+                new Claim("UserName", userInfo.Name ),
+                new Claim("DepartmentText", userInfo.DepartmentText),
+                new Claim("TeamText", userInfo.TeamText),
+                new Claim(ClaimTypes.Role, "Member"),
+                //new Claim("UserIndex", userInfo.Idx.ToString() ),
+            };
+        //[5] 토큰 생성 (사용자 정보, 비밀키, 토큰만료기한 포함)
+        var token = new JwtSecurityToken(
+            claims: claims,
+            signingCredentials: credentials,
+            expires: DateTime.Now.AddMinutes(5));
+
+        //[6] Serialize된 토큰 리턴
+        var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
+        return tokenString;
+    }
+
+}
