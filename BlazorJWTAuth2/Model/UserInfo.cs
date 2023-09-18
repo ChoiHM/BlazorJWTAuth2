@@ -1,6 +1,6 @@
 ﻿namespace BlazorJWTAuth2.Model
 {
-    public class ClaimInfo
+    public class UserInfo
     {
         public string? Id { get; set; }
         public string? Name { get; set; }
