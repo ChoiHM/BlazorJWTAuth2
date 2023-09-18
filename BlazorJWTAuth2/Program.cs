@@ -1,7 +1,9 @@
 ﻿using Blazored.LocalStorage;
 
+using BlazorJWTAuth2;
 using BlazorJWTAuth2.Auth;
 using BlazorJWTAuth2.Data;
+using BlazorJWTAuth2.DataAccess;
 using BlazorJWTAuth2.Model;
 
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -9,6 +11,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.IdentityModel.Tokens;
 
 using System.Reflection;
@@ -20,33 +23,17 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 
-//👇 추가
+builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Jwt"));
+
+//👇 추가 ========================
 builder.Services.AddScoped<CustomAuthStateProvider>();
 builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
-
-//👇 추가 (AddBlazoredLocalStorage)
 builder.Services.AddBlazoredLocalStorage();
-
-//👇 추가 (AddAuthentication, AddJwtBearer)
-builder.Services.AddAuthentication(options =>
-{
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-})
-.AddJwtBearer(options =>
-{
-    options.TokenValidationParameters = new TokenValidationParameters
-    {
-        ValidateIssuer = false,
-        ValidateAudience = false,
-        ValidateIssuerSigningKey = false,
-        //ValidIssuer = builder.Configuration["Jwt:Issuer"],
-        //ValidAudience = builder.Configuration["Jwt:Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("PEDOSriPgbjP45poei5ghyjoPOID24fthgbhEo5RETYGrdft"))
-    };
-});
+builder.Services.AddAuthenticationCore();
+// ===============================
 
 builder.Services.AddSingleton<WeatherForecastService>();
+builder.Services.AddSingleton<UserAccountService>(); //👈 추가: Id존재유무 등을 확인하기 위한 작업 실행
 
 var app = builder.Build();
 
