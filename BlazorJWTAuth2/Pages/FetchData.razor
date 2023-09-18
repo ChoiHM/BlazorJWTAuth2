@@ -55,22 +55,6 @@
     protected override async Task OnInitializedAsync()
     {
         forecasts = await ForecastService.GetForecastAsync(DateOnly.FromDateTime(DateTime.Now));
-
-        var authState = await _authState.GetAuthenticationStateAsync();
-        var user = authState.User;
-
-        // Admin권한을 갖고있는지 확인
-        // if(user.IsInRole("Admin"))
-        // {
-        // }
-
-        if (user.Identity is not null && user.Identity.IsAuthenticated)
-        {
-            var claims = user.Claims;
-        }
-        else
-        {
-        }
     }
 
 }
