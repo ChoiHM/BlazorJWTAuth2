@@ -1,7 +1,6 @@
 ﻿using Blazored.LocalStorage;
 
 using Microsoft.AspNetCore.Components.Authorization;
-
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 
@@ -20,7 +19,7 @@ namespace BlazorJWTAuth2.Auth
         {
             var tokenString = await _localStorage.ReadEncryptedItemAsync<string>("jwt");
 
-            if (string.IsNullOrEmpty(tokenString) || IsTokenValid(tokenString) == false)
+            if (IsTokenValid(tokenString) == false)
             {
                 return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
             }
@@ -57,6 +56,10 @@ namespace BlazorJWTAuth2.Auth
 
         public bool IsTokenValid(string token)
         {
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                return false;
+            }
             var tokenHandler = new JwtSecurityTokenHandler();
 
             if (!tokenHandler.CanReadToken(token))
